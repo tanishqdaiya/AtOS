@@ -7,7 +7,7 @@ _start:
     mov sp, x0
 
     // jump to rust
-    bl kernel_main
+    bl _rust_main
 
 1:
     wfe

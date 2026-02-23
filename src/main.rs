@@ -1,25 +1,12 @@
 #![no_std]
 #![no_main]
 
-use core::ptr::{read_volatile, write_volatile};
+use core::fmt::Write;
 
-const MMIO_BASE: usize = 0x3F000000;
-const AUX_BASE: usize = MMIO_BASE + 0x215000;
-const AUX_MU_IO: usize = AUX_BASE + 0x40;
-const AUX_MU_LSR: usize = AUX_BASE + 0x54;
+mod kernel;
 
-fn uart_write(c: u8) {
-    unsafe {
-        while read_volatile(AUX_MU_LSR as *const u32) & 0x20 == 0 {}
-        write_volatile(AUX_MU_IO as *mut u32, c as u32);
-    }
-}
-
-fn print(s: &str) {
-    for b in s.bytes() {
-        uart_write(b);
-    }
-}
+use kernel::utils::*;
+use kernel::peripherals::*;
 
 fn delay(mut count: u64) {
     while count > 0 {
@@ -29,9 +16,12 @@ fn delay(mut count: u64) {
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_main() -> ! {
+pub extern "C" fn _rust_main() -> ! {
+
+    println!("Welcome to, AtOS.").unwrap();
+
     loop {
-        print("hello from rust\r\n");
+        println!("hello from rust {}", get_current_el()).unwrap();
         delay(500_000);
     }
 }
