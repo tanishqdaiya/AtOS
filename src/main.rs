@@ -1,12 +1,9 @@
 #![no_std]
 #![no_main]
 
-use core::fmt::Write;
-
 mod kernel;
 
 use kernel::utils::*;
-use kernel::peripherals::*;
 
 fn delay(mut count: u64) {
     while count > 0 {
