@@ -2,6 +2,13 @@
 A basic Operating System created in rust, for the Raspberry Pi 3+ Hardware
 
 # Building
+you can just do 
+```
+make clean
+make
+```
+
+otherwise for manual effort
 
 ```
 cargo clean
