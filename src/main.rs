@@ -19,13 +19,14 @@ pub extern "C" fn _rust_main() -> ! {
     println!("Current EL is: EL{}", get_current_el()).unwrap();
     
     delay(10_000_000);
-    println!("$ ").unwrap();
+    print!("$ ").unwrap();
     
-    loop {}
+    loop {delay(5_000_000)}
 }
 
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
-    loop {}
+    println!("Some error happened...").unwrap();
+    loop {delay(10_000_000)}
 }
