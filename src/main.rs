@@ -16,11 +16,12 @@ fn delay(mut count: u64) {
 pub extern "C" fn _rust_main() -> ! {
 
     println!("Welcome to, AtOS.").unwrap();
-
-    loop {
-        println!("hello from rust {}", get_current_el()).unwrap();
-        delay(500_000);
-    }
+    println!("Current EL is: EL{}", get_current_el()).unwrap();
+    
+    delay(10_000_000);
+    println!("$ ").unwrap();
+    
+    loop {}
 }
 
 use core::panic::PanicInfo;
