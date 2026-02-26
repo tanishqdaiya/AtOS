@@ -7,6 +7,7 @@ SECTIONS
     .text :
     {
         *(.text.boot)
+        *(.text.vectors)
         *(.text*)
     }
 

@@ -6,6 +6,11 @@ _start:
     ldr     x0, =_stack_top
     mov     sp, x0
 
+    // load exception vector table for EL1
+    adr     x0, el1_vectors
+    msr     VBAR_EL1, x0
+    isb
+
     // checking current exception level
     mrs     x0, CurrentEL
     cmp     x0, #0x8 // EL2?
@@ -16,7 +21,7 @@ _start:
     msr     SP_EL1, x0
     
     mov     x0, #(1 << 31) // bit 31 selects Aarch32/64
-    msr     HCR_EL2, x0
+    msr     HCR_EL2, x0 // HCR_EL2 is like "a rulebook that EL2 writes for EL1"
 
     // set SPSR_EL2 to EL1h, basically once we ERET, we must switch to EL1h mode
     mov     x0, #(0b0101)  // EL1h

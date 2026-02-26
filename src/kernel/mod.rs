@@ -1,3 +1,3 @@
 pub mod utils;
 pub mod peripherals;
-pub mod macros;
+pub mod exceptions;
