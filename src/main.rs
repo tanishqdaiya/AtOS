@@ -3,7 +3,7 @@
 
 mod kernel;
 
-use kernel::utils::get_current_el;
+use kernel::{utils::get_current_el, timer::PhysicalTimer};
 
 fn delay(mut count: u64) {
     while count > 0 {
@@ -32,12 +32,25 @@ pub extern "C" fn _rust_main() -> ! {
 
     unsafe { core::arch::asm!("svc #0"); }
 
-    println!("done sending").unwrap();
-    
-    loop {delay(5_000_000)}
+    println!("done sending \r\nsetting three second timer...").unwrap();
+
+    // testing timer.
+    PhysicalTimer::set_seconds(3);
+    PhysicalTimer::start();
+
+    loop {
+        if (PhysicalTimer::read_ctl() & 0b100) == 0b100 {
+            println!("Timer went off!").unwrap();
+            println!("The end. Make sure to power off your RPi before disconnecting it :)").unwrap();
+            loop {
+                delay(1_000_000);
+            }
+        }
+    }
 }
 
 use core::panic::PanicInfo;
+
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
     println!("Some error happened...").unwrap();
