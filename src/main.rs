@@ -15,11 +15,24 @@ fn delay(mut count: u64) {
 #[no_mangle]
 pub extern "C" fn _rust_main() -> ! {
 
+    unsafe {
+        core::arch::asm!("
+    // enable IRQ for Physical timer non secure core 0
+    ldr x0, =0x40000040
+    mov w1, #0x02
+    str w1, [x0]
+    msr DAIFClr, #0x2")
+    }
+
     println!("\r\nWelcome to, AtOS.").unwrap();
     println!("Current EL is: EL{}", get_current_el()).unwrap();
     
     delay(10_000_000);
-    print!("$ ").unwrap();
+    println!("$ TEST 0").unwrap();
+
+    // testing timer.
+    PhysicalTimer::set_seconds(5);
+    PhysicalTimer::start();
 
     println!("Sending svc in...").unwrap();
 
@@ -34,10 +47,6 @@ pub extern "C" fn _rust_main() -> ! {
 
     println!("done sending \r\nsetting three second timer...").unwrap();
 
-    // testing timer.
-    PhysicalTimer::set_seconds(3);
-    PhysicalTimer::start();
-
     loop {
         if (PhysicalTimer::read_ctl() & 0b100) == 0b100 {
             println!("Timer went off!").unwrap();
@@ -50,9 +59,8 @@ pub extern "C" fn _rust_main() -> ! {
 }
 
 use core::panic::PanicInfo;
-
 #[panic_handler]
-fn panic(_: &PanicInfo) -> ! {
+fn panic(_panic: &PanicInfo) -> ! {
     println!("Some error happened...").unwrap();
     loop {delay(10_000_000)}
 }

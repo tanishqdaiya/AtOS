@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::println;
+
 pub struct PhysicalTimer;
 
 impl PhysicalTimer {
@@ -120,5 +122,6 @@ impl PhysicalTimer {
             .expect("Physical Timer Seconds Overflow.");
 
         Self::set_cval(now + ticks);
+        println!("[TIMER] p cval was set.. {} seconds", seconds).unwrap();
     }
 }
