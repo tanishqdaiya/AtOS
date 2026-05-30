@@ -24,8 +24,8 @@ _start:
     msr     HCR_EL2, x0 // HCR_EL2 is like "a rulebook that EL2 writes for EL1"
 
     // set SPSR_EL2 to EL1h, basically once we ERET, we must switch to EL1h mode
-    mov     x0, #(0b0101)  // EL1h
-    orr     x0, x0, #(0b1111 << 6)
+    mov     x0, #(0b00101)  // EL1h 
+    orr     x0, x0, #(0b1111 << 6) // mask all exceptions (D, A, I, F)
     msr     SPSR_EL2, x0
 
     // finally set the ERET PC
