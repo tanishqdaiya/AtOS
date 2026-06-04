@@ -1,10 +1,5 @@
 [package]
-name = "at-os"
+name = "user"
 version = "0.1.0"
 edition = "2024"
 authors = ["ZackyGameDev <zaacky2456@gmail.com>"]
-
-[dependencies]
-
-[build-dependencies]
-cc = "1.0"

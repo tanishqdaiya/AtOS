@@ -15,6 +15,8 @@ SECTIONS
     .data   : { *(.data*) }
     .bss    : { *(.bss*) }
 
+    _kernel_top = .;
+
     . = ALIGN(16);
     _stack_top = . + 0x4000;
 }

@@ -32,7 +32,7 @@ pub struct ExceptionContext {
 }
 
 // called by `exceptions.s`
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     
     println!("An exception has been detected :D").unwrap();

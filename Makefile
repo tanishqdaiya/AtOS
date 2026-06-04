@@ -18,6 +18,10 @@ build:
 kernel8.img: build
 	$(OBJCOPY) $(BUILD) -O binary kernel8.img
 
+# Run in QEMU (Emulating Raspberry Pi 3B+ with Mini UART redirected to terminal)
+run:
+	$(QEMU) -M raspi3b -kernel kernel8.img -serial null -serial stdio
+
 # Clean everything
 clean:
 	cargo clean
