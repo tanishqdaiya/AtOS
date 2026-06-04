@@ -1,4 +1,5 @@
 use crate::println;
+use crate::kernel::syscalls;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
@@ -31,13 +32,7 @@ pub struct ExceptionContext {
     pub far: u64,
 }
 
-// called by `exceptions.s`
-#[unsafe(no_mangle)]
-pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
-    
-    println!("An exception has been detected :D").unwrap();
-    
-    // printing the full context for now.
+fn print_exception_context(ctx: &ExceptionContext) -> () {
     let etype_str = match ctx.etype {
         ExceptionType::_SYNC => "SYNC",
         ExceptionType::_IRQ  => "IRQ",
@@ -63,3 +58,43 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     }
     println!("=========================").unwrap();
 }
+
+macro_rules! unhandled_exception {
+    ($ctx:expr) => {{
+        println!("Unhandled exception detected!").unwrap();
+        print_exception_context($ctx);
+    }};
+}
+
+
+fn handle_sync_exception(ctx: &ExceptionContext) -> () {
+    let exception_class = (ctx.esr >> 26) & 0x3f;
+
+    match ctx.esource {
+        ExceptionSource::_EL064=> {
+            match exception_class {
+                0x15 => { // it was an svc instruction
+                    syscalls::handle_syscall(ctx);
+                },
+                _ => unhandled_exception!(ctx),
+            }
+        },
+        _ => unhandled_exception!(ctx),
+    }
+}
+
+// called by `exceptions.s`
+#[unsafe(no_mangle)]
+pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
+    
+    // println!("An exception has been detected :D").unwrap();
+    
+    // handling the exception based on the type and source.
+    match ctx.etype {
+        ExceptionType::_SYNC => handle_sync_exception(ctx),
+        _ => unhandled_exception!(ctx),
+
+    }
+
+}
+

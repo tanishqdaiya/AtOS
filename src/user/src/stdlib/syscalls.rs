@@ -6,14 +6,29 @@
 
 use core::{fmt, fmt::Write};
 
+
+/* ~~~ POINTLESS PREMPT TO KERNEL ~~~ */
+// This is just for user program to trap into the kernel, without 
+// necessarily any request.
+// I assign the syscall number 0 to this (svc #0)
+pub fn trap() {
+    unsafe {
+        core::arch::asm!("svc #0");
+    }
+}
+
 /* ~~~ STDIO ~~~ */ 
+// For printing or getting input from the stdio (UART).
+// printing is assigned syscall number 1 (svc #1), 
+// and getting input is assigned syscall number 2 (svc #2)
+// \TODO INPUT HANDLING
 pub struct Stdout;
 
 impl fmt::Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         unsafe {
             core::arch::asm!(
-                "svc #0",
+                "svc #1",
                 in("x0") s.as_ptr(),
                 in("x1") s.len(),
             );
