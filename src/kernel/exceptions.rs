@@ -76,6 +76,9 @@ fn handle_sync_exception(ctx: &ExceptionContext) -> () {
                 0x15 => { // it was an svc instruction
                     syscalls::handle_syscall(ctx);
                 },
+                0x07 => { 
+                    println!("EXCEPTION: FP/SIMD functionality used when not enabled!").unwrap();
+                },
                 _ => unhandled_exception!(ctx),
             }
         },

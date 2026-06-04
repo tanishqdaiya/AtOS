@@ -12,11 +12,13 @@ pub extern "C" fn _start() -> ! {
     x += 1;
     println!("x = {}", x).unwrap();
     
+    println!("init program is done working, it will now loop forever.").unwrap();
     loop {}
 }
 
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    println!("Some error occurred in the init program!").unwrap();
     loop {}
 }

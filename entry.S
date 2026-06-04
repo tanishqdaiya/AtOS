@@ -11,6 +11,12 @@ _start:
     msr     VBAR_EL1, x0
     isb
 
+    // diables fp/simd interrupts 
+    mrs     x0, CPACR_EL1
+    orr     x0, x0, #(3 << 20)
+    msr     CPACR_EL1, x0
+    isb
+
     // checking current exception level
     mrs     x0, CurrentEL
     cmp     x0, #0x8 // EL2?

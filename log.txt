@@ -1,0 +1,12 @@
+qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio
+
+Welcome to, AtOS.
+Current EL is: EL1
+Kernel ends at: 0x89a72
+Kernel size: 550 KB
+Stack top at: 0x8da80
+hello this code is running in the init program!
+x = 1
+x = 2
+init program is done working, it will now loop forever.
+qemu: terminating on signal 2
