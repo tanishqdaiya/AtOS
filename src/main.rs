@@ -74,28 +74,14 @@ pub extern "C" fn _rust_main() -> ! {
     println!("Kernel size: {} KB", kernel_end_addr / 1024).unwrap();
     println!("Stack top at: {:#x}", stack_top_addr).unwrap();
 
-//    load_and_run_init_process();
-
-    loop {
-	let byte = Uart.read_byte();
-
-	if byte == 127 || byte == 8 {
-	    Uart.write_byte(8); // Move cursor left by one space
-	    Uart.write_byte(32); // Print a space (overwriting the old character, effectively hiding it)
-	    Uart.write_byte(8); // Move the cursor left again so that it stays at the position it is meant to stay in
-	} else if byte == b'\r' || byte == b'\n' {
-	    let _ = println!();
-	} else  {
-	    let _ = print!("{}", byte as char);
-	}
-    }
+   load_and_run_init_process();
     
-    // loop {
-    //     println!("The end. Make sure to power off your RPi before disconnecting it :)").unwrap();
-    //     loop {
-    //         delay(1_000_000);
-    //     }
-    // }
+    loop {
+        println!("The end. Make sure to power off your RPi before disconnecting it :)").unwrap();
+        loop {
+            delay(1_000_000);
+        }
+    }
 }
 
 use core::panic::PanicInfo;

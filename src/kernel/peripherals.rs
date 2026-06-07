@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use core::fmt::{Arguments, Result, Write};
 use core::ptr::{read_volatile, write_volatile};
 
@@ -26,29 +28,29 @@ pub struct Uart;
 impl Uart {
     // This time we'll be more explicit
     pub fn init(&self) {
-	unsafe {
-	    write_volatile(AUXENB, read_volatile(AUXENB) | 1); // enable Mini UART
-	    write_volatile(AUX_MU_CNTL_REG, 0); // to disable t/r
-	    write_volatile(AUX_MU_IER_REG, 0); // to disable interrupts
-	    write_volatile(AUX_MU_LCR_REG, 3); // for 8-bit mode
-	    write_volatile(AUX_MU_IIR_REG, 0x06); // clear FIFOs
-	    write_volatile(AUX_MU_BAUD, 270); // 115200 baud at 250MHz and baud_rate = sys_clock_f/(8*(baud_rate_reg + 1))
+        unsafe {
+            write_volatile(AUXENB, read_volatile(AUXENB) | 1); // enable Mini UART
+            write_volatile(AUX_MU_CNTL_REG, 0); // to disable t/r
+            write_volatile(AUX_MU_IER_REG, 0); // to disable interrupts
+            write_volatile(AUX_MU_LCR_REG, 3); // for 8-bit mode
+            write_volatile(AUX_MU_IIR_REG, 0x06); // clear FIFOs
+            write_volatile(AUX_MU_BAUD, 270); // 115200 baud at 250MHz and baud_rate = sys_clock_f/(8*(baud_rate_reg + 1))
 
-	    // Setup GPIO 14 & 15 to Alt Function 5
-            let mut gpfsel = read_volatile(GPFSEL1);
-            gpfsel &= !((7 << 12) | (7 << 15));
-            gpfsel |= (2 << 12) | (2 << 15);
-            write_volatile(GPFSEL1, gpfsel);
+            // Setup GPIO 14 & 15 to Alt Function 5
+                let mut gpfsel = read_volatile(GPFSEL1);
+                gpfsel &= !((7 << 12) | (7 << 15));
+                gpfsel |= (2 << 12) | (2 << 15);
+                write_volatile(GPFSEL1, gpfsel);
 
-	    // Disable pull-up/down
-	    write_volatile(GPPUD, 0);
-            for _ in 0..150 { core::hint::spin_loop(); }
-            write_volatile(GPPUDCLK0, (1 << 14) | (1 << 15));
-            for _ in 0..150 { core::hint::spin_loop(); }
-            write_volatile(GPPUDCLK0, 0);
+            // Disable pull-up/down
+            write_volatile(GPPUD, 0);
+                for _ in 0..150 { core::hint::spin_loop(); }
+                write_volatile(GPPUDCLK0, (1 << 14) | (1 << 15));
+                for _ in 0..150 { core::hint::spin_loop(); }
+                write_volatile(GPPUDCLK0, 0);
 
-	    write_volatile(AUX_MU_CNTL_REG, 3); // enable t/r
-	}
+            write_volatile(AUX_MU_CNTL_REG, 3); // enable t/r
+        }
     }
     
     pub fn write_byte(&self, c: u8) {
@@ -60,10 +62,10 @@ impl Uart {
 
     // Will fix it later
     pub fn read_byte(&self) -> u8 {
-	unsafe {
-	    while (read_volatile(AUX_MU_LSR_REG) & 0x01) == 0 { core::hint::spin_loop(); }
-	    (read_volatile(AUX_MU_IO_REG) & 0xFF) as u8
-	}
+        unsafe {
+            while (read_volatile(AUX_MU_LSR_REG) & 0x01) == 0 { core::hint::spin_loop(); }
+            (read_volatile(AUX_MU_IO_REG) & 0xFF) as u8
+        }
     }
 }
 
@@ -92,7 +94,7 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => {
-	$crate::print!("\n")
+	    $crate::print!("\n")
     };
     
     ($($args:tt)*) => {
