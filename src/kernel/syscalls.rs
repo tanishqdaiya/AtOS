@@ -4,7 +4,7 @@ use crate::kernel::exceptions::ExceptionContext;
 pub fn handle_syscall(ctx: &ExceptionContext) -> () {
     // when it was because of `svc`, 
     // lower 16 bits of the ESR will have the syscall number.
-    let syscall_number = ctx.esr & 0xffff; 
+    let syscall_number: u16 = (ctx.esr & 0xffff) as u16; 
 
     match syscall_number {
         1 => sys_print(ctx).unwrap(),

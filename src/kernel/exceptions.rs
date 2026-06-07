@@ -1,8 +1,10 @@
 use crate::println;
 use crate::kernel::syscalls;
+use crate::kernel::interrupts::{Interrupts, InterruptSource};
+use crate::kernel::timer::PhysicalTimer;
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ExceptionType {
     _SYNC,
     _IRQ,
@@ -11,7 +13,7 @@ pub enum ExceptionType {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ExceptionSource {
     _EL1t,
     _EL1h,
@@ -86,6 +88,20 @@ fn handle_sync_exception(ctx: &ExceptionContext) -> () {
     }
 }
 
+fn handle_irq_exception(ctx: &ExceptionContext) -> () {
+    let mut irq_sources: u32 = Interrupts::pending_irq();
+
+    if irq_sources & (InterruptSource::PhysicalNonSecureTimer as u32) != 0 {
+        PhysicalTimer::handle_irq();
+        irq_sources &= !(InterruptSource::PhysicalNonSecureTimer as u32);
+    }
+
+    if irq_sources > 0 {
+        println!("Other Unhandled IRQ sources pending: {:#x}", irq_sources).unwrap();
+        unhandled_exception!(ctx);
+    }
+}
+
 // called by `exceptions.s`
 #[unsafe(no_mangle)]
 pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
@@ -95,8 +111,8 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     // handling the exception based on the type and source.
     match ctx.etype {
         ExceptionType::_SYNC => handle_sync_exception(ctx),
+        ExceptionType::_IRQ  => handle_irq_exception(ctx),
         _ => unhandled_exception!(ctx),
-
     }
 
 }

@@ -5,6 +5,8 @@ mod kernel;
 
 use kernel::utils::get_current_el;
 use kernel::peripherals::Uart;
+use kernel::timer::PhysicalTimer;
+use kernel::interrupts::Interrupts;
 
 // this is to read from the linker-- the end of kernel in memory and top of the stack. 
 unsafe extern "C" {
@@ -64,6 +66,8 @@ fn enter_user(entry_point: usize, stack_top: usize) {
 #[unsafe(no_mangle)]
 pub extern "C" fn _rust_main() -> ! {
     Uart.init();
+    PhysicalTimer::init_irq();
+    Interrupts::daif_unmask_all();
     
     println!("Welcome to, AtOS.").unwrap();
     println!("Current EL is: EL{}", get_current_el()).unwrap();
@@ -74,14 +78,14 @@ pub extern "C" fn _rust_main() -> ! {
     println!("Kernel size: {} KB", kernel_end_addr / 1024).unwrap();
     println!("Stack top at: {:#x}", stack_top_addr).unwrap();
 
-   load_and_run_init_process();
-    
-    loop {
-        println!("The end. Make sure to power off your RPi before disconnecting it :)").unwrap();
-        loop {
-            delay(1_000_000);
-        }
-    }
+    println!("Kernel done. Calling the user process `init` with 3 second timer for demonstration").unwrap();
+
+    PhysicalTimer::set_seconds(3);
+    PhysicalTimer::enable();
+
+    load_and_run_init_process();
+
+    loop { core::hint::spin_loop(); }
 }
 
 use core::panic::PanicInfo;

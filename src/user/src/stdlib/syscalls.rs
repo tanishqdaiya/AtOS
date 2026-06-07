@@ -39,8 +39,7 @@ impl fmt::Write for Stdout {
 }
 
 pub fn _print(args: fmt::Arguments) -> fmt::Result {
-    Stdout.write_fmt(args).unwrap();
-    Ok(())
+    Stdout.write_fmt(args)
 }
 
 #[macro_export]
@@ -57,7 +56,7 @@ macro_rules! println {
     ($($arg:tt)*) => ({
         $crate::stdlib::syscalls::_print(
             core::format_args!(
-                "{}\r\n",
+                "{}\n",
                 core::format_args!($($arg)*)
             )
         )

@@ -1,10 +1,33 @@
 #![allow(dead_code)]
 
 use crate::println;
+use crate::kernel::interrupts::{Interrupts, TimerInterruptSource, InterruptRoute};
+
 
 pub struct PhysicalTimer;
 
 impl PhysicalTimer {
+    pub fn init_irq(){
+        Interrupts::route_timer_interrupt(TimerInterruptSource::PhysicalNonSecure, InterruptRoute::IRQ);
+    }
+
+    // \TODO Physical timers IRQ could be triggered as secure or non secure. 
+    // later you may want to add a argument here which lets you differentiate between
+    // the two. but for now we only use non secure world so it's fine to just 
+    // handle it. 
+    pub fn handle_irq() { 
+        println!("[P_TIMER] Physical Timer Interrupt Fired!").unwrap();
+
+        // clearing the interrupt by pushing the timer deadline into the future.
+        Self::set_cval(Self::read_cnt() + Self::read_frq());
+        Self::disable(); // disable the timer so the interrupt doesn't go off again and again.
+        // \TODO when implementing "scheduling", then instead of disabling the timer,
+        // you may instead want to just set it to the next deadline when cup should 
+        // be preempted. but right now with no scheduling implemented, 
+        // im just disabling the timer since no code has a standard use for it right now.
+    }
+
+
     #[inline(always)]
     pub fn read_cnt() -> u64 {
         let value: u64;
