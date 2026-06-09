@@ -16,9 +16,10 @@ build:
 
 bin: build
 	mkdir -p $(OUT_DIR)
+	mkdir -p $(OUT_DIR)/dump
 	@for prog in $(PROGRAMS); do \
 		cp $(BUILD_DIR)/$$prog $(OUT_DIR)/$$prog; \
-		$(OBJCOPY) -O binary $(BUILD_DIR)/$$prog $(OUT_DIR)/$$prog.bin; \
+		$(OBJCOPY) -O binary $(BUILD_DIR)/$$prog $(OUT_DIR)/dump/$$prog.bin; \
 		echo "Built $$prog.bin"; \
 	done
 

@@ -1,10 +1,9 @@
 #![no_std]
 #![no_main]
 
-use user::println;
+use user::{entry, println};
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+fn main() {
     println!("hello this code is running in the init program!").unwrap();
 
     let mut x = 1;
@@ -13,12 +12,8 @@ pub extern "C" fn _start() -> ! {
     println!("x = {}", x).unwrap();
     
     println!("init program is done working, it will now loop forever.").unwrap();
-    loop {}
+    loop {println!("This is init looping forever!").unwrap(); core::hint::spin_loop();}
 }
 
-use core::panic::PanicInfo;
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("Some error occurred in the init program!").unwrap();
-    loop {}
-}
+
+entry!(main);

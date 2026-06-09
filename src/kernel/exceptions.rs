@@ -1,3 +1,5 @@
+use crate::kernel::processes::ProcessContext;
+use crate::kernel::scheduler::Scheduler;
 use crate::println;
 use crate::kernel::syscalls;
 use crate::kernel::interrupts::{Interrupts, InterruptSource};
@@ -13,7 +15,7 @@ pub enum ExceptionType {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ExceptionSource {
     _EL1t,
     _EL1h,
@@ -23,6 +25,7 @@ pub enum ExceptionSource {
 
 
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct ExceptionContext {
     pub etype: ExceptionType, // u8
     pub esource: ExceptionSource, // u8
@@ -32,6 +35,14 @@ pub struct ExceptionContext {
     pub spsr: u64,
     pub esr: u64,
     pub far: u64,
+}
+
+impl ExceptionContext {
+    pub fn update_from_pctx(&mut self, pctx: &ProcessContext) {
+        self.x.copy_from_slice(&pctx.x);
+        self.elr = pctx.elr;
+        self.spsr = pctx.spsr;
+    }
 }
 
 fn print_exception_context(ctx: &ExceptionContext) -> () {
@@ -68,8 +79,11 @@ macro_rules! unhandled_exception {
     }};
 }
 
+fn was_from_user_el0(ctx: &ExceptionContext) -> bool {
+    ctx.esource == ExceptionSource::_EL064 || ctx.esource == ExceptionSource::_EL032
+}
 
-fn handle_sync_exception(ctx: &ExceptionContext) -> () {
+fn handle_sync_exception(ctx: &mut ExceptionContext) -> () {
     let exception_class = (ctx.esr >> 26) & 0x3f;
 
     match ctx.esource {
@@ -88,11 +102,11 @@ fn handle_sync_exception(ctx: &ExceptionContext) -> () {
     }
 }
 
-fn handle_irq_exception(ctx: &ExceptionContext) -> () {
+fn handle_irq_exception(ctx: &mut ExceptionContext) -> () {
     let mut irq_sources: u32 = Interrupts::pending_irq();
 
     if irq_sources & (InterruptSource::PhysicalNonSecureTimer as u32) != 0 {
-        PhysicalTimer::handle_irq();
+        PhysicalTimer::handle_irq(ctx);
         irq_sources &= !(InterruptSource::PhysicalNonSecureTimer as u32);
     }
 
@@ -106,6 +120,22 @@ fn handle_irq_exception(ctx: &ExceptionContext) -> () {
 #[unsafe(no_mangle)]
 pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     
+    // if it came from EL0, then we need to update PCB of the process interrupted.
+    if was_from_user_el0(ctx) {
+        let sp_el0: u64;
+        unsafe {
+            // reading sp_el0
+            core::arch::asm!(
+                "mrs {val}, sp_el0",
+                val = out(reg) sp_el0,
+                options(nostack, preserves_flags)
+            )
+        }
+        let new_pctx = ProcessContext::from_ectx(ctx, sp_el0);
+
+        Scheduler::update_last_running_pctx(&new_pctx);
+    }
+
     // println!("An exception has been detected :D").unwrap();
     
     // handling the exception based on the type and source.
@@ -114,6 +144,8 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
         ExceptionType::_IRQ  => handle_irq_exception(ctx),
         _ => unhandled_exception!(ctx),
     }
+
+    // next process is scheduled in timer irq handler
 
 }
 

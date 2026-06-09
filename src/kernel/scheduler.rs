@@ -1,0 +1,95 @@
+use core::panic;
+
+use crate::kernel::exceptions::ExceptionContext;
+use crate::kernel::processes::{PROCESS_TABLE, ProcessContext, MAX_PROCESSES, ProcessState};
+use crate::kernel::timer::PhysicalTimer;
+use crate::println;
+use crate::the_end;
+
+pub static mut CURRENT_PROCESS: usize = 0; // last scheduled process index in process table
+pub const TIMESLICE_MILISECONDS: u64 = 1; 
+
+// we implement xv6 similar round robin
+
+pub struct Scheduler;
+
+impl Scheduler {
+
+    pub fn schedule_next(ectx: &mut ExceptionContext) {
+        if let Some(next_process) = Self::choose_next_process() {
+            Self::load_pctx(next_process, ectx);
+        } else {
+            println!("[SCHEDULER] No process to schedule!").unwrap();
+            the_end();
+        }
+    }
+
+    fn choose_next_process() -> Option<usize> {
+        unsafe {
+            // if current progress has not finished its time slice, continue it
+            if let Some(current_process) = PROCESS_TABLE[CURRENT_PROCESS] {
+                if current_process.state == ProcessState::Running {
+                    return Some(CURRENT_PROCESS as usize);
+                }
+            }
+            // otherwise scan forward circularly for next process
+            for i in 1..(MAX_PROCESSES+1) { // +1, so if no other processes are found, it will circle back to current process
+                let idx = (CURRENT_PROCESS + i) % MAX_PROCESSES;
+                if let Some(process) = PROCESS_TABLE[idx] {
+                    if process.state == ProcessState::Ready {
+                        CURRENT_PROCESS = idx;
+                        return Some(idx);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn load_pctx(pidx: usize, ectx: &mut ExceptionContext) {
+        unsafe {
+            if let Some(process) = &mut PROCESS_TABLE[pidx] {
+                CURRENT_PROCESS = pidx;
+                process.set_state(ProcessState::Running);
+                ectx.update_from_pctx(&process.pctx);
+                core::arch::asm!("msr SP_EL0, {sp}", sp = in(reg) process.pctx.sp);
+            } else {
+                panic!("in Scheduler::load_pctx(), process not found!");
+                // panic, because this function is only called in schedule() and ONLY after choose_next_process() returns Some(pidx). so if for some mysterious reason the process just disappeared after being chosen, we might want kernel to scream.
+            }
+        }
+    }
+
+    pub fn update_last_running_pctx(new_pctx: &ProcessContext) {
+        unsafe {
+            if let Some(current_process) = &mut PROCESS_TABLE[CURRENT_PROCESS] {
+                current_process.set_pctx(*new_pctx);
+            } else {
+                panic!("Last running process disappeared for unaccounted reason!");
+                // panic, because this function is going to only exclusively called
+                // in handle_exception_el1. and ONLY in the case when the exception
+                // came from EL0. which would be our last scheduled user process.
+                // so if for some mysterious reason the process just disappeared
+                // after an exception came from it, we might want kernel to scream.
+            }
+        }
+    }
+
+    fn reset_timer() {
+        PhysicalTimer::set_milliseconds(TIMESLICE_MILISECONDS);
+        PhysicalTimer::enable();
+    }
+
+    pub fn timeslice_up() {
+        // updating current processs from running to ready.
+        unsafe {
+            if let Some(current_process) = &mut PROCESS_TABLE[CURRENT_PROCESS] {
+                current_process.set_state(ProcessState::Ready);
+            } else {
+                panic!("Current process disappeared for unaccounted reason!");
+            }
+        }
+
+        Self::reset_timer();
+    }
+}

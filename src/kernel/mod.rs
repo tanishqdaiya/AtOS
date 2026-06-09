@@ -4,3 +4,5 @@ pub mod exceptions;
 pub mod timer;
 pub mod syscalls;
 pub mod interrupts;
+pub mod processes;
+pub mod scheduler;

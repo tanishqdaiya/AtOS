@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
-use crate::println;
+use crate::dprintln;
 use crate::kernel::interrupts::{Interrupts, TimerInterruptSource, InterruptRoute};
-
+use crate::kernel::exceptions::ExceptionContext;
+use crate::kernel::scheduler::Scheduler;
 
 pub struct PhysicalTimer;
 
@@ -15,16 +16,14 @@ impl PhysicalTimer {
     // later you may want to add a argument here which lets you differentiate between
     // the two. but for now we only use non secure world so it's fine to just 
     // handle it. 
-    pub fn handle_irq() { 
-        println!("[P_TIMER] Physical Timer Interrupt Fired!").unwrap();
+    pub fn handle_irq(ctx: &mut ExceptionContext) { 
+        dprintln!("[P_TIMER] Physical Timer Interrupt Fired!");
+        dprintln!("[P_TIMER] Calling Scheduler");
+        PhysicalTimer::set_seconds(1); // disable irq by immedaitely scheduling it into the future
+        PhysicalTimer::disable();
 
-        // clearing the interrupt by pushing the timer deadline into the future.
-        Self::set_cval(Self::read_cnt() + Self::read_frq());
-        Self::disable(); // disable the timer so the interrupt doesn't go off again and again.
-        // \TODO when implementing "scheduling", then instead of disabling the timer,
-        // you may instead want to just set it to the next deadline when cup should 
-        // be preempted. but right now with no scheduling implemented, 
-        // im just disabling the timer since no code has a standard use for it right now.
+        Scheduler::timeslice_up();
+        Scheduler::schedule_next(ctx);
     }
 
 
@@ -144,7 +143,28 @@ impl PhysicalTimer {
             .checked_mul(seconds)
             .expect("Physical Timer Seconds Overflow.");
 
-        Self::set_cval(now + ticks);
-        println!("[TIMER] p cval was set.. {} seconds", seconds).unwrap();
+        let cval = now
+            .checked_add(ticks)
+            .expect("Physical Timer CVAL Overflow.");
+
+        Self::set_cval(cval);
+        dprintln!("[TIMER] p cval was set.. {} seconds", seconds);
+    }
+
+    pub fn set_milliseconds(milliseconds: u64) {
+        let freq = Self::read_frq();
+        let now = Self::read_cnt();
+
+        let ticks = freq
+            .checked_mul(milliseconds)
+            .expect("Physical Timer Milliseconds Overflow.")
+            / 1000;
+
+        let cval = now
+            .checked_add(ticks)
+            .expect("Physical Timer CVAL Overflow.");
+
+        Self::set_cval(cval);
+        dprintln!("[TIMER] p cval was set.. {} ms", milliseconds);
     }
 }
