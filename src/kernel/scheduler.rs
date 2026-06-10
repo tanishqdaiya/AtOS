@@ -14,6 +14,9 @@ pub const TIMESLICE_MILISECONDS: u64 = 1;
 pub struct Scheduler;
 
 impl Scheduler {
+    pub fn get_current_process_index() -> usize {
+        unsafe { CURRENT_PROCESS }
+    }
 
     pub fn schedule_next(ectx: &mut ExceptionContext) {
         if let Some(next_process) = Self::choose_next_process() {

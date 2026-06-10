@@ -62,3 +62,15 @@ macro_rules! println {
         )
     });
 }
+
+/* ~~~ PROCESS CONTROL ~~~ */
+// exit is assigned syscall number 3 (svc #3)
+pub fn exit(exit_code: i32) -> ! {
+    unsafe {
+        core::arch::asm!(
+            "svc #3",
+            in("x0") exit_code,
+            options(noreturn)
+        );
+    }
+}
