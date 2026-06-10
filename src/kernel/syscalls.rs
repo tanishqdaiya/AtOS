@@ -1,4 +1,5 @@
 use crate::print;
+use crate::kernel::input;
 use crate::kernel::exceptions::ExceptionContext;
 use crate::kernel::processes::ProcessState;
 use crate::kernel::scheduler::Scheduler;
@@ -8,6 +9,7 @@ pub fn handle_syscall(ctx: &mut ExceptionContext) -> () {
 
     match syscall_number {
         1 => sys_print(ctx).unwrap(),
+	2 => sys_read(ctx).unwrap(),
         3 => sys_exit(ctx).unwrap(),
         _ => {
             print!("Unknown syscall: {}", ctx.x[8]).unwrap();
@@ -24,6 +26,27 @@ fn sys_print(ctx: &ExceptionContext) -> core::fmt::Result {
     let s = core::str::from_utf8(s).unwrap_or("");
 
     print!("{}", s).unwrap();
+    Ok(())
+}
+
+// SYSCALL #2 -- READ */
+pub fn sys_read(ctx: &mut ExceptionContext) -> core::fmt::Result {
+    let usr_bufp = ctx.x[1] as *mut u8;
+    let buf_sz = ctx.x[2] as usize;
+
+    // Invalid arguments, return 0 bytes read.
+    if usr_bufp.is_null() || buf_sz == 0 {
+	ctx.x[0] = 0;
+	return Ok(());
+    }
+
+    let buf = unsafe {
+	core::slice::from_raw_parts_mut(usr_bufp, buf_sz)
+    };
+
+    let r = input::getline(buf);
+    ctx.x[0] = r as u64;
+
     Ok(())
 }
 

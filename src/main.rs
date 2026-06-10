@@ -18,6 +18,7 @@ unsafe extern "C" {
     unsafe static _stack_top: u8;
 }
 
+/*
 #[unsafe(no_mangle)]
 pub extern "C" fn _rust_main() -> ! {
     Uart.init();
@@ -44,11 +45,38 @@ pub extern "C" fn _rust_main() -> ! {
 
     load_process("init", 0, process_a_image, 0x200000, 0x200274);
     load_process("process b", 0, process_b_image, 0x500000, 0x500334);
-
+    
     println!("Starting the scheduler!").unwrap();
     PhysicalTimer::set_seconds(1);
     PhysicalTimer::enable();
 
+    loop { core::hint::spin_loop(); }
+} */
+
+/* For input testing */
+#[unsafe(no_mangle)]
+pub extern "C" fn _rust_main() -> ! {
+    Uart.init();
+    
+    // We keep interrupts OFF for this test so the timer doesn't take control away
+    
+    println!("=== AtOS Raw Input Test ===").unwrap();
+    println!("Testing kernel space getline directly. Type a line and hit enter:").unwrap();
+
+    let mut test_buffer = [0u8; 64];
+
+    let bytes_read = kernel::input::getline(&mut test_buffer);
+
+    println!("\n--- Test Results ---").unwrap();
+    println!("Bytes read: {}", bytes_read).unwrap();
+    
+    if let Ok(s) = core::str::from_utf8(&test_buffer[..bytes_read]) {
+        println!("Buffer contains: {}", s).unwrap();
+    } else {
+        println!("Buffer contains invalid UTF-8 data.").unwrap();
+    }
+
+    println!("Direct hardware testing complete. Halting CPU.").unwrap();
     loop { core::hint::spin_loop(); }
 }
 

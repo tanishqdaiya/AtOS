@@ -6,3 +6,4 @@ pub mod syscalls;
 pub mod interrupts;
 pub mod processes;
 pub mod scheduler;
+pub mod input;

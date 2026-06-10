@@ -63,6 +63,21 @@ macro_rules! println {
     });
 }
 
+pub fn sys_readline(buf: &mut [u8]) -> usize {
+    let p = buf.as_mut_ptr() as u64;
+    let l = buf.len() as u64;
+    let mut r: u64;
+
+    unsafe {
+	core::arch::asm!("svc #2", // @Todo(tanishqdaiya): Find a better way to implement this. A C way would be to simply have a bunch of defines and a trap function call
+		   inout("x0") p => r, // we're using x0 to pass arg and then read back into x0
+		   in("x1") l,
+		   clobber_abi("C"));
+    }
+
+    r as usize
+}
+
 /* ~~~ PROCESS CONTROL ~~~ */
 // exit is assigned syscall number 3 (svc #3)
 pub fn exit(exit_code: i32) -> ! {
