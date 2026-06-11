@@ -15,7 +15,7 @@ pub struct Scheduler;
 
 impl Scheduler {
 
-    pub fn start() {
+    pub fn start() -> ! {
         dprintln!("[SCHEDULER] Starting scheduler...");
         unsafe {
             core::arch::asm!("svc #0", options(noreturn));

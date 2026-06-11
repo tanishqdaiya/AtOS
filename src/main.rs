@@ -47,8 +47,7 @@ pub extern "C" fn _rust_main() -> ! {
 
     println!("Starting the scheduler!").unwrap();
     Scheduler::start();
-
-    loop { core::hint::spin_loop(); }
+    
 }
 
 // usually, an os has a root user process which spawns all the other user processes. 
