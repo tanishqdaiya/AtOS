@@ -9,8 +9,8 @@ use kernel::timer::PhysicalTimer;
 use kernel::interrupts::Interrupts;
 use kernel::processes::{load_process};
 
-pub const DEBUG_PRINTS_ENABLED: bool = true;  
-// pub const DEBUG_PRINTS_ENABLED: bool = false;  
+// pub const DEBUG_PRINTS_ENABLED: bool = true;  
+pub const DEBUG_PRINTS_ENABLED: bool = false;  
 
 // this is to read from the linker-- the end of kernel in memory and top of the stack. 
 unsafe extern "C" {
@@ -18,7 +18,6 @@ unsafe extern "C" {
     unsafe static _stack_top: u8;
 }
 
-/*
 #[unsafe(no_mangle)]
 pub extern "C" fn _rust_main() -> ! {
     Uart.init();
@@ -43,42 +42,40 @@ pub extern "C" fn _rust_main() -> ! {
     let process_a_image: &'static [u8] = include_bytes!("user/init.bin");
     let process_b_image: &'static [u8] = include_bytes!("user/b.bin");
 
-    load_process("init", 0, process_a_image, 0x200000, 0x200274);
-    load_process("process b", 0, process_b_image, 0x500000, 0x500334);
-    
-    println!("Starting the scheduler!").unwrap();
-    PhysicalTimer::set_seconds(1);
-    PhysicalTimer::enable();
+    load_process("init", 0, process_a_image, 0x200000, 0x2002e0);
+    load_process("process b", 0, process_b_image, 0x500000, 0x500500);
 
-    loop { core::hint::spin_loop(); }
-} */
+    println!("Starting the scheduler!").unwrap();
+    Scheduler::start();
+    
+}
 
 /* For input testing */
-#[unsafe(no_mangle)]
-pub extern "C" fn _rust_main() -> ! {
-    Uart.init();
+// #[unsafe(no_mangle)]
+// pub extern "C" fn _rust_main() -> ! {
+//     Uart.init();
     
-    // We keep interrupts OFF for this test so the timer doesn't take control away
+//     // We keep interrupts OFF for this test so the timer doesn't take control away
     
-    println!("=== AtOS Raw Input Test ===").unwrap();
-    println!("Testing kernel space getline directly. Type a line and hit enter:").unwrap();
+//     println!("=== AtOS Raw Input Test ===").unwrap();
+//     println!("Testing kernel space getline directly. Type a line and hit enter:").unwrap();
 
-    let mut test_buffer = [0u8; 64];
+//     let mut test_buffer = [0u8; 64];
 
-    let bytes_read = kernel::input::getline(&mut test_buffer);
+//     let bytes_read = kernel::input::getline(&mut test_buffer);
 
-    println!("\n--- Test Results ---").unwrap();
-    println!("Bytes read: {}", bytes_read).unwrap();
+//     println!("\n--- Test Results ---").unwrap();
+//     println!("Bytes read: {}", bytes_read).unwrap();
     
-    if let Ok(s) = core::str::from_utf8(&test_buffer[..bytes_read]) {
-        println!("Buffer contains: {}", s).unwrap();
-    } else {
-        println!("Buffer contains invalid UTF-8 data.").unwrap();
-    }
+//     if let Ok(s) = core::str::from_utf8(&test_buffer[..bytes_read]) {
+//         println!("Buffer contains: {}", s).unwrap();
+//     } else {
+//         println!("Buffer contains invalid UTF-8 data.").unwrap();
+//     }
 
-    println!("Direct hardware testing complete. Halting CPU.").unwrap();
-    loop { core::hint::spin_loop(); }
-}
+//     println!("Direct hardware testing complete. Halting CPU.").unwrap();
+//     loop { core::hint::spin_loop(); }
+// }
 
 // usually, an os has a root user process which spawns all the other user processes. 
 // the scheduler should always have at least one process to switch to.
@@ -89,10 +86,14 @@ pub extern "C" fn _rust_main() -> ! {
 pub fn the_end() -> ! {
     println!("All processes have completed/terminated.").unwrap();
     println!("There is nothing left to do. You may power off your device now.").unwrap();
+    PhysicalTimer::set_seconds(1);
+    PhysicalTimer::disable();
     loop { core::hint::spin_loop(); }
 }
 
 use core::panic::PanicInfo;
+
+use crate::kernel::scheduler::Scheduler;
 #[panic_handler]
 fn panic(panic: &PanicInfo) -> ! {
     println!("Kernel Panicked!: {}", panic).unwrap();
