@@ -3,22 +3,48 @@
 use crate::kernel::exceptions::ExceptionContext;
 
 pub const MAX_PROCESSES: usize = 50;
-pub static mut PROCESS_TABLE: [Option<Process>; MAX_PROCESSES] = [None; MAX_PROCESSES]; 
-pub static mut NEXT_PID: u64 = 1; // 0 could be for kernel
+
+//
+// CPU Abstraction
+//
 
 pub struct Cpu {
+    pub current_pid: Option<u64>, // Tracking the running proc by id
+    
     pub ncli: usize, // Depth of nested spinlocks held on this CPU
     pub interrupts_enabled: bool, // Were interrupts enabled BEFORE the very first lock?
 }
 
-pub static mut MYCPU: Cpu = Cpu {
-    ncli: 0,
-    interrupts_enabled: false,
-};
+impl Cpu {
+    fn get_instance() -> &'static mut Self {
+	static mut MYCPU: Cpu = Cpu {
+	    ncli: 0,
+	    interrupts_enabled: false,
+	    current_pid: None,
+	};
+	unsafe { &mut MYCPU }
+    }
 
-pub fn mycpu() -> &'static mut Cpu {
-    unsafe { &mut MYCPU }
+    pub fn current() -> &'static mut Self {
+	Self::get_instance()
+    }
+
+    pub fn set_current_process(&mut self, pid: u64) {
+	self.current_pid = Some(pid);
+    }
+
+    pub fn clear_current_process(&mut self) {
+	self.current_pid = None;
+    }
 }
+
+// @Todo(cleanup): You can remove this, but you'd have to fix the references.
+pub fn mycpu() -> &'static mut Cpu {
+    Cpu::current()
+}
+
+pub static mut PROCESS_TABLE: [Option<Process>; MAX_PROCESSES] = [None; MAX_PROCESSES]; 
+pub static mut NEXT_PID: u64 = 1; // 0 could be for kernel
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -86,6 +112,35 @@ impl Process {
 
     pub fn set_pctx(&mut self, new_ctx: ProcessContext) {
         self.pctx = new_ctx;
+    }
+
+    pub fn get_current() -> Option<&'static mut Process> {
+	let cpu = Cpu::current();
+	let current_id = cpu.current_pid?;
+
+	unsafe {
+	    for slot in PROCESS_TABLE.iter_mut() {
+		if let Some(proc) = slot {
+		    if proc.pid == current_id {
+			return Some(proc);
+		    }
+		}
+	    }
+	}
+	None
+    }
+
+    pub fn find_by_id(pid: u64) -> Option<&'static mut Process> {
+	unsafe {
+	    for slot in PROCESS_TABLE.iter_mut() {
+		if let Some(proc) = slot {
+		    if proc.pid == pid {
+			return Some(proc);
+		    }
+		}
+	    }
+	}
+	None
     }
 }
 
