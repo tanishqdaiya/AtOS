@@ -8,6 +8,7 @@ use kernel::peripherals::Uart;
 use kernel::timer::PhysicalTimer;
 use kernel::interrupts::Interrupts;
 use kernel::processes::{load_process};
+use kernel::spinlock::Spinlock;
 
 // pub const DEBUG_PRINTS_ENABLED: bool = true;  
 pub const DEBUG_PRINTS_ENABLED: bool = false;  
@@ -44,6 +45,66 @@ pub extern "C" fn _rust_main() -> ! {
 
     load_process("init", 0, process_a_image, 0x200000, 0x2002e0);
     load_process("process b", 0, process_b_image, 0x500000, 0x500500);
+
+    // ===================
+    // BEGIN Spinlock Test
+    // ===================
+    static LOCK_A: Spinlock = Spinlock::new("main_lock_a");
+    static LOCK_B: Spinlock = Spinlock::new("main_lock_b");
+
+    // Test #1
+    println!("-> Verifying nesting rules").unwrap();
+    Interrupts::irq_enable();
+    assert!(Interrupts::irq_enabled(), "Setup failure: IRQs should be enabled");
+
+    LOCK_A.acquire();
+    assert!(!Interrupts::irq_enabled(), "Error: lock_a did not mask hardware IRQs");
+
+    LOCK_B.acquire();
+    assert!(!Interrupts::irq_enabled(), "Error: lock_b leaked hardware IRQs");
+    LOCK_B.release();
+
+    // Lock B dropped but lock A still held
+    assert!(!Interrupts::irq_enabled(), "CRITICAL FAULT: Nested lock release leaked interrupts early!");
+    LOCK_A.release();
+
+    assert!(Interrupts::irq_enabled(), "Error: Outer lock release failed to restore active IRQs");
+    println!("   [PASSED]").unwrap();
+
+    // Test #2
+    println!("-> Verifying original rules...").unwrap();
+    Interrupts::irq_disable();
+    assert!(!Interrupts::irq_enabled());
+
+    LOCK_A.acquire();
+    LOCK_A.release();
+
+    // The relase must not force interrupts to be on if they were off initially
+    assert!(!Interrupts::irq_enabled(), "CRITICAL FAULT: Lock forced IRQs active when they were originally masked!");
+
+    // Restore to default enabled.
+    Interrupts::irq_enable();
+    println!("   [PASSED]").unwrap();
+
+
+    // Test #3
+    // Flip this boolean parameter manually to true to test lock's crash loop
+    let run_destructive_check = false;
+    if run_destructive_check {
+        println!("-> Verifying single-core recursive deadlock safety trap...").unwrap();
+        LOCK_A.acquire();
+        println!("   First acquire won. Requesting second acquire on same lock (expecting panic)...").unwrap();
+        
+        // This will force a kernel crash
+        LOCK_A.acquire();
+        
+        assert!(false, "CRITICAL FAULT: System bypassed recursive lock boundary check without a panic!");
+    }
+
+    println!("=== Spinlock checked. No problemo!~ ===").unwrap();
+    // =================
+    // END Spinlock Test
+    // =================
 
     println!("Starting the scheduler!").unwrap();
     Scheduler::start();

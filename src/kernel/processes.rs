@@ -6,6 +6,20 @@ pub const MAX_PROCESSES: usize = 50;
 pub static mut PROCESS_TABLE: [Option<Process>; MAX_PROCESSES] = [None; MAX_PROCESSES]; 
 pub static mut NEXT_PID: u64 = 1; // 0 could be for kernel
 
+pub struct Cpu {
+    pub ncli: usize, // Depth of nested spinlocks held on this CPU
+    pub interrupts_enabled: bool, // Were interrupts enabled BEFORE the very first lock?
+}
+
+pub static mut MYCPU: Cpu = Cpu {
+    ncli: 0,
+    interrupts_enabled: false,
+};
+
+pub fn mycpu() -> &'static mut Cpu {
+    unsafe { &mut MYCPU }
+}
+
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[allow(unused)]
