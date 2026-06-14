@@ -3,6 +3,8 @@ use core::panic;
 use crate::kernel::exceptions::ExceptionContext;
 use crate::kernel::processes::{Cpu, PROCESS_TABLE, ProcessContext, MAX_PROCESSES, ProcessState};
 use crate::kernel::timer::PhysicalTimer;
+use crate::kernel::spinlock::Spinlock;
+use crate::kernel::processes::Process;
 use crate::dprintln;
 use crate::the_end;
 
@@ -108,7 +110,7 @@ impl Scheduler {
         Self::reset_timer();
     }
 
-    pub fn sleep(channel: *const ()) {
+    pub fn sleep(channel: *const (), mutex_guard: &Spinlock) {
 	unsafe {
 	    if let Some(current_process) = &mut PROCESS_TABLE[CURRENT_PROCESS] {
                 current_process.set_state(ProcessState::Blocked);
@@ -119,6 +121,8 @@ impl Scheduler {
 
 	    // Clear Cpu tracker because the process is no longer running
 	    Cpu::current().clear_current_process();
+
+	    mutex_guard.release();
 	    
 	    core::arch::asm!("svc #0");
 	}
@@ -127,7 +131,9 @@ impl Scheduler {
     pub fn wakeup(channel: *const ()) {
 	let channel_addr = channel as u64;
 	unsafe {
-	    for slot in PROCESS_TABLE.iter_mut() {
+	    let table_ptr = core::ptr::addr_of_mut!(PROCESS_TABLE) as *mut Option<Process>;
+	    for i in 0..MAX_PROCESSES {
+		let slot = &mut *table_ptr.add(i);
 		if let Some(process) = slot {
 		    if process.state == ProcessState::Blocked && process.chan == channel_addr {
 			process.set_state(ProcessState::Ready);

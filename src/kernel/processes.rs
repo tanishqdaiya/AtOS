@@ -87,6 +87,7 @@ pub struct Process {
     pub state: ProcessState,
     pub parent_pid: u64, // initially this was &Parent but then i'd have to deal with rust lifetime complications
     pub pctx: ProcessContext,
+    pub chan: u64,
 }
 
 impl Process {
@@ -103,7 +104,12 @@ impl Process {
         let len = core::cmp::min(bytes.len(), 32);
         name_bytes[..len].copy_from_slice(&bytes[..len]);
 
-        Self { pid, name: name_bytes, state: ProcessState::Ready, parent_pid, pctx: ProcessContext::new(entry_point, sp) }
+        Self { pid,
+	       name: name_bytes,
+	       state: ProcessState::Ready,
+	       parent_pid,
+	       pctx: ProcessContext::new(entry_point, sp),
+	       chan: 0, }
     }
 
     pub fn set_state(&mut self, new_state: ProcessState) {

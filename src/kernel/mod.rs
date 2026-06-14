@@ -1,4 +1,5 @@
 pub mod utils;
+pub mod mutex;
 pub mod peripherals;
 pub mod exceptions;
 pub mod timer;

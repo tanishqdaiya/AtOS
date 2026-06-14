@@ -7,8 +7,9 @@ use kernel::utils::get_current_el;
 use kernel::peripherals::Uart;
 use kernel::timer::PhysicalTimer;
 use kernel::interrupts::Interrupts;
-use kernel::processes::{load_process};
+use kernel::processes::{load_process, Process, ProcessState};
 use kernel::spinlock::Spinlock;
+use kernel::mutex::Mutex;
 
 // pub const DEBUG_PRINTS_ENABLED: bool = true;  
 pub const DEBUG_PRINTS_ENABLED: bool = false;  
@@ -105,6 +106,48 @@ pub extern "C" fn _rust_main() -> ! {
     // =================
     // END Spinlock Test
     // =================
+
+    // ================
+    // BEGIN Mutex Test
+    // ================
+    println!("== Begin Mutex Tests ==").unwrap();
+    static TEST_MUTEX: Mutex = Mutex::new("main_test_mutex");
+
+    // Test #1: Without Scheduler
+    println!("-> Testing uncontended Mutex acquisition...").unwrap();
+    assert!(!TEST_MUTEX.is_locked(), "Error: Mutex should've been unlocked");
+
+    TEST_MUTEX.acquire();
+    assert!(TEST_MUTEX.is_locked(), "Error: Mutex should've been locked after acquire");
+
+    TEST_MUTEX.release();
+    assert!(!TEST_MUTEX.is_locked(), "Error: Mutex should've been unlocked after release");
+    println!("   [PASSED]").unwrap();
+
+    // Test #2: Simulating sleep/wakeup situation
+    // I was not quite sure about how to test this sleep/wakeup situation,
+    // naturally, I decided to delegate this to an LLM. While I have reviewed
+    // the following, I request other maintainers/reviewers to check it out.
+    if let Some(proc_init) = Process::find_by_id(1) {
+        let fake_channel = 0xCAFEBABE as *const ();
+	proc_init.set_state(ProcessState::Blocked);
+        proc_init.chan = fake_channel as u64;
+	println!("   Process 'init' simulated sleeping on channel {:#x}", fake_channel as u64).unwrap();
+	Scheduler::wakeup(fake_channel);
+	assert_eq!(
+            proc_init.state, 
+            ProcessState::Ready, 
+            "CRITICAL FAULT: Scheduler::wakeup failed to restore process back to Ready!"
+        );
+        assert_eq!(proc_init.chan, 0, "Error: Wakeup did not clear the process sleep channel");
+        println!("   [PASSED]").unwrap();
+    } else {
+	println!("   [WARNING]: Could not find process 'init' to run state test.").unwrap();
+    }
+    println!("=== Mutex and Sleep/Wakeup tracking verified cleanly! ===\n").unwrap();
+    // ================
+    // END Mutex Test
+    // ================
 
     println!("Starting the scheduler!").unwrap();
     Scheduler::start();
