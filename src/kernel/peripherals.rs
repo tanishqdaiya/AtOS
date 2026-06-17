@@ -37,22 +37,22 @@ impl Uart {
             write_volatile(AUX_MU_BAUD, 270); // 115200 baud at 250MHz and baud_rate = sys_clock_f/(8*(baud_rate_reg + 1))
 
             // Setup GPIO 14 & 15 to Alt Function 5
-                let mut gpfsel = read_volatile(GPFSEL1);
-                gpfsel &= !((7 << 12) | (7 << 15));
-                gpfsel |= (2 << 12) | (2 << 15);
-                write_volatile(GPFSEL1, gpfsel);
+            let mut gpfsel = read_volatile(GPFSEL1);
+            gpfsel &= !((7 << 12) | (7 << 15));
+            gpfsel |= (2 << 12) | (2 << 15);
+            write_volatile(GPFSEL1, gpfsel);
 
             // Disable pull-up/down
             write_volatile(GPPUD, 0);
-                for _ in 0..150 { core::hint::spin_loop(); }
-                write_volatile(GPPUDCLK0, (1 << 14) | (1 << 15));
-                for _ in 0..150 { core::hint::spin_loop(); }
-                write_volatile(GPPUDCLK0, 0);
+            for _ in 0..150 { core::hint::spin_loop(); }
+            write_volatile(GPPUDCLK0, (1 << 14) | (1 << 15));
+            for _ in 0..150 { core::hint::spin_loop(); }
+            write_volatile(GPPUDCLK0, 0);
 
             write_volatile(AUX_MU_CNTL_REG, 3); // enable t/r
         }
     }
-    
+
     pub fn write_byte(&self, c: u8) {
         unsafe {
             while (read_volatile(AUX_MU_LSR_REG) & 0x20) == 0 { core::arch::asm!("nop"); }
@@ -72,7 +72,7 @@ impl Uart {
 impl Write for Uart {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for b in s.bytes() {
-	    if b == b'\n' { self.write_byte(b'\r'); }
+            if b == b'\n' { self.write_byte(b'\r'); }
             self.write_byte(b);
         }
         Ok(())
@@ -94,11 +94,11 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => {
-	    $crate::print!("\n")
+        $crate::print!("\n")
     };
-    
+
     ($($args:tt)*) => {
         $crate::kernel::peripherals::_print(core::format_args!($($args)*))
-	    .and_then(|_| $crate::print!("\n"))
+            .and_then(|_| $crate::print!("\n"))
     };
 }

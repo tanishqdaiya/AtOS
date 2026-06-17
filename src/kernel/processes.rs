@@ -3,47 +3,60 @@
 use crate::kernel::exceptions::ExceptionContext;
 
 pub const MAX_PROCESSES: usize = 50;
+pub const MAX_CPUS: usize = 1; // for now
 
 //
 // CPU Abstraction
 //
 
 pub struct Cpu {
+    pub cid: usize,
     pub current_pid: Option<u64>, // Tracking the running proc by id
-    
+
     pub ncli: usize, // Depth of nested spinlocks held on this CPU
     pub interrupts_enabled: bool, // Were interrupts enabled BEFORE the very first lock?
 }
 
 impl Cpu {
-    fn get_instance() -> &'static mut Self {
-	static mut MYCPU: Cpu = Cpu {
-	    ncli: 0,
-	    interrupts_enabled: false,
-	    current_pid: None,
-	};
-	unsafe { &mut MYCPU }
+    // This gets called by current to get raw physical address. get_instance()
+    // doesn't know anything about CPU cores. Its only job is to manage static
+    // memory. This is like returning the base address of the global Cpu
+    // structs.
+    fn get_instance() -> &'static mut [Cpu; MAX_CPUS] {
+        static mut CPUS: [Cpu; MAX_CPUS] = [
+            Cpu { cid: 0, ncli: 0, interrupts_enabled: false, current_pid: None }
+        ];
+        unsafe { &mut CPUS }
     }
 
+    // This calls get_instance to get the base address and then (when we do have
+    // multiple cores) indexes into the correct Cpu structure belonging to that
+    // specific core.
     pub fn current() -> &'static mut Self {
-	Self::get_instance()
+        // For now. Later, we'll check mpidr_el1
+        let cpus = Self::get_instance();
+        &mut cpus[0]
     }
 
     pub fn set_current_process(&mut self, pid: u64) {
-	self.current_pid = Some(pid);
+        self.current_pid = Some(pid);
     }
 
     pub fn clear_current_process(&mut self) {
-	self.current_pid = None;
+        self.current_pid = None;
     }
 }
 
-// @Todo(cleanup): You can remove this, but you'd have to fix the references.
+// This will act as a nice utility function without going into Cpu methods.
 pub fn mycpu() -> &'static mut Cpu {
     Cpu::current()
 }
 
-pub static mut PROCESS_TABLE: [Option<Process>; MAX_PROCESSES] = [None; MAX_PROCESSES]; 
+//
+// Processes
+//
+
+pub static mut PROCESS_TABLE: [Option<Process>; MAX_PROCESSES] = [None; MAX_PROCESSES];
 pub static mut NEXT_PID: u64 = 1; // 0 could be for kernel
 
 #[repr(u8)]
@@ -54,13 +67,13 @@ pub enum ProcessState {
     Running,
     Blocked,
     Terminated,
-} 
+}
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ProcessContext {
-    pub x: [u64; 31], 
-    pub sp: u64, 
+    pub x: [u64; 31],
+    pub sp: u64,
     pub elr: u64, // address to jump to when jumping to this process
     pub spsr: u64,
 }
@@ -105,11 +118,11 @@ impl Process {
         name_bytes[..len].copy_from_slice(&bytes[..len]);
 
         Self { pid,
-	       name: name_bytes,
-	       state: ProcessState::Ready,
-	       parent_pid,
-	       pctx: ProcessContext::new(entry_point, sp),
-	       chan: 0, }
+               name: name_bytes,
+               state: ProcessState::Ready,
+               parent_pid,
+               pctx: ProcessContext::new(entry_point, sp),
+               chan: 0, }
     }
 
     pub fn set_state(&mut self, new_state: ProcessState) {
@@ -121,32 +134,32 @@ impl Process {
     }
 
     pub fn get_current() -> Option<&'static mut Process> {
-	let cpu = Cpu::current();
-	let current_id = cpu.current_pid?;
+        let cpu = Cpu::current();
+        let current_id = cpu.current_pid?;
 
-	unsafe {
-	    for slot in PROCESS_TABLE.iter_mut() {
-		if let Some(proc) = slot {
-		    if proc.pid == current_id {
-			return Some(proc);
-		    }
-		}
-	    }
-	}
-	None
+        unsafe {
+            for slot in PROCESS_TABLE.iter_mut() {
+                if let Some(proc) = slot {
+                    if proc.pid == current_id {
+                        return Some(proc);
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn find_by_id(pid: u64) -> Option<&'static mut Process> {
-	unsafe {
-	    for slot in PROCESS_TABLE.iter_mut() {
-		if let Some(proc) = slot {
-		    if proc.pid == pid {
-			return Some(proc);
-		    }
-		}
-	    }
-	}
-	None
+        unsafe {
+            for slot in PROCESS_TABLE.iter_mut() {
+                if let Some(proc) = slot {
+                    if proc.pid == pid {
+                        return Some(proc);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -173,7 +186,7 @@ pub fn load_process(process_name: &str, parent_pid: u64, process_image: &'static
     }
 
     // i got this entry point from the compiled init elf.
-    let stack_top: u64 = (process_addr + process_image.len() as u64 + 0x4000) & !0xf; // 16 byte aligned stack top 
+    let stack_top: u64 = (process_addr + process_image.len() as u64 + 0x4000) & !0xf; // 16 byte aligned stack top
     // right now i have just hardcoded some stack pointer for EL0
 
     let process: Process = Process::new(process_name, parent_pid, entry_point, stack_top);

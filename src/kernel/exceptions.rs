@@ -102,7 +102,7 @@ fn handle_sync_exception(ctx: &mut ExceptionContext) -> () {
                 0x15 => { // it was an svc instruction
                     syscalls::handle_syscall(ctx);
                 },
-                0x07 => { 
+                0x07 => {
                     println!("EXCEPTION: FP/SIMD functionality used when not enabled!").unwrap();
                 },
                 _ => unhandled_exception!(ctx),
@@ -129,7 +129,7 @@ fn handle_irq_exception(ctx: &mut ExceptionContext) -> () {
 // called by `exceptions.s`
 #[unsafe(no_mangle)]
 pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
-    
+
     // if it came from EL0, then we need to update PCB of the process interrupted.
     if was_from_user_el0(ctx) {
         let sp_el0: u64;
@@ -147,7 +147,7 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     }
 
     // println!("An exception has been detected :D").unwrap();
-    
+
     // handling the exception based on the type and source.
     match ctx.etype {
         ExceptionType::_SYNC => handle_sync_exception(ctx),
@@ -158,4 +158,3 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
     // next process is scheduled in timer irq handler
 
 }
-

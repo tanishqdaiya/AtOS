@@ -12,11 +12,11 @@ impl PhysicalTimer {
         Interrupts::route_timer_interrupt(TimerInterruptSource::PhysicalNonSecure, InterruptRoute::IRQ);
     }
 
-    // \TODO Physical timers IRQ could be triggered as secure or non secure. 
+    // \TODO Physical timers IRQ could be triggered as secure or non secure.
     // later you may want to add a argument here which lets you differentiate between
-    // the two. but for now we only use non secure world so it's fine to just 
-    // handle it. 
-    pub fn handle_irq(ctx: &mut ExceptionContext) { 
+    // the two. but for now we only use non secure world so it's fine to just
+    // handle it.
+    pub fn handle_irq(ctx: &mut ExceptionContext) {
         dprintln!("[P_TIMER] Physical Timer Interrupt Fired!");
         dprintln!("[P_TIMER] Calling Scheduler");
         PhysicalTimer::set_seconds(1); // disable irq by immedaitely scheduling it into the future
@@ -88,14 +88,14 @@ impl PhysicalTimer {
     #[inline(always)]
     pub fn enable() {
         let mut ctl = Self::read_ctl();
-        ctl |= 1 << 0; 
+        ctl |= 1 << 0;
         Self::write_ctl(ctl);
     }
 
     #[inline(always)]
     pub fn disable() {
         let mut ctl = Self::read_ctl();
-        ctl &= !1; 
+        ctl &= !1;
         Self::write_ctl(ctl);
     }
 

@@ -1,6 +1,6 @@
-// println and print macros, they're basically macros which will take 
-// the format string and arguments, format them, and then call the _print 
-// function in peripherals.rs which will write the formatted arguments as typical println and print functions 
+// println and print macros, they're basically macros which will take
+// the format string and arguments, format them, and then call the _print
+// function in peripherals.rs which will write the formatted arguments as typical println and print functions
 
 // this file cannot reference kernel crate, the entire user directory will technically be a separate crate. so the println function here, what it will do is it will take the arguments that the user gives, and then build a string out of it, paste that string somewhere in memory, and the use svc to trap into EL1 while giving the address to the string and the type of syscall required
 
@@ -8,7 +8,7 @@ use core::{fmt, fmt::Write};
 
 
 /* ~~~ POINTLESS PREMPT TO KERNEL ~~~ */
-// This is just for user program to trap into the kernel, without 
+// This is just for user program to trap into the kernel, without
 // necessarily any request.
 // I assign the syscall number 0 to this (svc #0)
 pub fn trap() {
@@ -17,9 +17,9 @@ pub fn trap() {
     }
 }
 
-/* ~~~ STDIO ~~~ */ 
+/* ~~~ STDIO ~~~ */
 // For printing or getting input from the stdio (UART).
-// printing is assigned syscall number 1 (svc #1), 
+// printing is assigned syscall number 1 (svc #1),
 // and getting input is assigned syscall number 2 (svc #2)
 // \TODO INPUT HANDLING
 pub struct Stdout;
@@ -69,10 +69,10 @@ pub fn sys_readline(buf: &mut [u8]) -> usize {
     let mut r: u64;
 
     unsafe {
-	core::arch::asm!("svc #2", // @Todo(tanishqdaiya): Find a better way to implement this. A C way would be to simply have a bunch of defines and a trap function call
-		   inout("x0") p => r, // we're using x0 to pass arg and then read back into x0
-		   in("x1") l,
-		   clobber_abi("C"));
+        core::arch::asm!("svc #2", // @Todo(tanishqdaiya): Find a better way to implement this. A C way would be to simply have a bunch of defines and a trap function call
+                         inout("x0") p => r, // we're using x0 to pass arg and then read back into x0
+                         in("x1") l,
+                         clobber_abi("C"));
     }
 
     r as usize
