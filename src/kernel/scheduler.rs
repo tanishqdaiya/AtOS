@@ -125,6 +125,8 @@ impl Scheduler {
             mutex_guard.release();
 
             core::arch::asm!("svc #0");
+
+            mutex_guard.acquire();
         }
     }
 
