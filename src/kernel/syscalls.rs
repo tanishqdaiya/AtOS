@@ -12,7 +12,7 @@ pub fn handle_syscall(ctx: &mut ExceptionContext) -> () {
         2 => sys_read(ctx).unwrap(),
         3 => sys_exit(ctx).unwrap(),
         _ => {
-            print!("Unknown syscall: {}", ctx.x[8]).unwrap();
+            print!("Unknown syscall: {}", syscall_number).unwrap();
         }
     }
 }
