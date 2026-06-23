@@ -191,7 +191,9 @@ pub fn load_process(process_name: &str, parent_pid: u64, process_image: &'static
 
     let process: Process = Process::new(process_name, parent_pid, entry_point, stack_top);
 
-    let _ = add_process_to_ptable(process);
+    if let Err(e) = add_process_to_ptable(process) {
+        dprintln!("{}", e);
+        panic!("load_process: {}", e);
+    }
 
-    // enter_user(entry_point, stack_top); // obsolete
 }
